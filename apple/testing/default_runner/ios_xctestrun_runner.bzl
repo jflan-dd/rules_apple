@@ -15,6 +15,7 @@ def _get_template_substitutions(
         device_type,
         os_version,
         simulator_creator,
+        runtime_root,
         random,
         xcodebuild_args,
         command_line_args,
@@ -33,6 +34,7 @@ def _get_template_substitutions(
         "xcodebuild_args": xcodebuild_args,
         "command_line_args": command_line_args,
         "simulator_creator.py": simulator_creator,
+        "runtime_root.py": runtime_root,
         # "ordered" isn't a special string, but anything besides "random" for this field runs in order
         "test_order": "random" if random else "ordered",
         "xctestrun_template": xctestrun_template,
@@ -69,7 +71,11 @@ def _ios_xctestrun_runner_impl(ctx):
     runfiles = ctx.runfiles(files = [
         ctx.file._xctestrun_template,
         ctx.file._xctrunner_entitlements_template,
-    ]).merge(ctx.attr._simulator_creator[DefaultInfo].default_runfiles)
+    ]).merge(
+        ctx.attr._simulator_creator[DefaultInfo].default_runfiles
+    ).merge(
+        ctx.attr._runtime_root[DefaultInfo].default_runfiles
+    )
 
     default_action_binary = "/usr/bin/true"
 
@@ -94,6 +100,7 @@ def _ios_xctestrun_runner_impl(ctx):
             device_type = device_type,
             os_version = os_version,
             simulator_creator = ctx.executable._simulator_creator.short_path,
+            runtime_root = ctx.executable._runtime_root.short_path,
             random = ctx.attr.random,
             xcodebuild_args = " ".join(ctx.attr.xcodebuild_args) if ctx.attr.xcodebuild_args else "",
             command_line_args = " ".join(ctx.attr.command_line_args) if ctx.attr.command_line_args else "",
@@ -207,6 +214,13 @@ When true, the exit code of the test run will be set to the exit code of the pos
         "_simulator_creator": attr.label(
             default = Label(
                 "//apple/testing/default_runner:simulator_creator",
+            ),
+            executable = True,
+            cfg = "exec",
+        ),
+        "_runtime_root": attr.label(
+            default = Label(
+                "//apple/testing/default_runner:runtime_root",
             ),
             executable = True,
             cfg = "exec",

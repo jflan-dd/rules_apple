@@ -398,10 +398,18 @@ else
 fi
 
 simulator_id="unused"
+dyld_fallback_path=None
 if [[ "$build_for_device" == false ]]; then
   simulator_id="$("./%(simulator_creator.py)s" \
     "${simulator_creator_args[@]}"
   )"
+
+  if [[ "%(os_version)s" =~ 18\.[3-5] ]]; then
+    runtime_root="$("./%(runtime_root.py)s" \
+      "%(os_version)s"
+    )"
+    dyld_fallback_path="$runtime_root/System/Cryptexes/OS/usr/lib/swift"
+  fi
 fi
 
 test_exit_code=0
@@ -477,6 +485,7 @@ if [[ "$should_use_xcodebuild" == true ]]; then
     -e "s@BAZEL_TARGET_APP_PATH@$xcrun_target_app_path@g" \
     -e "s@BAZEL_TEST_ORDER_STRING@%(test_order)s@g" \
     -e "s@BAZEL_DYLD_LIBRARY_PATH@__PLATFORMS__/$test_execution_platform/Developer/usr/lib@g" \
+    -e "s@BAZEL_DYLD_FALLBACK_LIBRARY_PATH@$dyld_fallback_path@g" \
     -e "s@BAZEL_COVERAGE_OUTPUT_DIR@$test_tmp_dir@g" \
     -e "s@BAZEL_COMMAND_LINE_ARGS_SECTION@$xctestrun_cmd_line_args_section@g" \
     -e "s@BAZEL_ATTACHMENT_LIFETIME_SECTION@$xctestrun_attachment_lifetime_section@g" \
