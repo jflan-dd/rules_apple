@@ -34,6 +34,7 @@ import argparse
 import os
 import re
 import shutil
+import subprocess
 import sys
 import textwrap
 import time
@@ -281,6 +282,10 @@ def _get_parser():
       action="store_true",
       help="Disables code signing for imported frameworks.",
   )
+  parser.add_argument(
+      "--strip_symbols", action="store_true", default=False, help=
+      "https://docs.emergetools.com/docs/strip-binary-symbols"
+  )
 
   # codesigning args are parsed but not used if '--disable_signing' is set
   codesigningtool.add_parser_arguments(parser)
@@ -374,6 +379,28 @@ def main() -> None:
     # Modify codesigningtool arg to sign the current framework version
     # This matches Xcode behavior of re-signing only the effective version.
     args.target_to_sign = [version_dir]
+
+  # https://docs.emergetools.com/docs/strip-binary-symbols
+  if args.strip_symbols:
+    framework_binary_path = os.path.join(args.temp_path, framework_name)
+
+    # Check if the framework is signed by Apple
+    is_apple_framework = subprocess.run(
+      args = [args.codesign, "-v", '-R="anchor apple"', framework_binary_path],
+      capture_output = True,
+    ).returncode == 0
+
+    if not is_apple_framework:
+      execute.execute_and_filter_output(
+          cmd_args=[
+              "/usr/bin/strip",
+              "-r",
+              "-S",
+              "-T",
+              "-x",
+              framework_binary_path
+          ],
+          raise_on_failure=True)
 
   # Attempt to sign the framework, check for an error when signing.
   if not args.disable_signing:

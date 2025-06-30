@@ -158,6 +158,9 @@ def _framework_import_partial_impl(
 
         args.add_all(files_by_framework[framework_basename], before_each = "--framework_file")
 
+        if "apple.strip_symbols" in features:
+            args.add("--strip_symbols")
+
         codesign_args = codesigning_support.codesigning_args(
             entitlements = None,
             features = features,
